@@ -3,7 +3,6 @@ package app.spektralab.android.ui
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -721,13 +720,14 @@ private fun DarkroomEditorScreen(
             }
 
             // Top-Right Collapsible RGB + Luminance Histogram
-            AnimatedVisibility(
-                visible = uiState.showHistogramOverlay,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(10.dp)
-            ) {
-                HistogramOverlayCard(histogram = uiState.histogram)
+            if (uiState.showHistogramOverlay) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(10.dp)
+                ) {
+                    HistogramOverlayCard(histogram = uiState.histogram)
+                }
             }
 
             // Bottom-Right Quick Recipe Actions Pill
