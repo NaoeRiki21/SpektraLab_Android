@@ -49,7 +49,7 @@ data class DarkroomUiState(
     val engineError: String? = null,
     val gpuDeviceName: String = "",
     val engineBuildStamp: String = "",
-    val activeScreen: ScreenRoute = ScreenRoute.LIBRARY,
+    val activeScreen: ScreenRoute = ScreenRoute.EDITOR,
 
     // Appearance & Language
     val themeMode: ThemeMode = ThemeMode.DARK,
@@ -264,7 +264,7 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
                     rawMode = "compatible16",
                     wbTempK = 0.0,
                     wbTint = 0.0,
-                    initialParams = DarkroomParams()
+                    initialParams = _uiState.value.params
                 )
             } catch (t: Throwable) {
                 _uiState.update {
@@ -420,6 +420,10 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
             )
         }
 
+        if (_uiState.value.photoMetadata.filePath.isBlank()) {
+            return
+        }
+
         renderJob?.cancel()
         renderJob = viewModelScope.launch(engineDispatcher) {
             if (onlyOverlayChanged && reusableNativeBitmap != null) {
@@ -445,6 +449,7 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
                 canRedo = redoStack.isNotEmpty()
             )
         }
+        if (_uiState.value.photoMetadata.filePath.isBlank()) return
         viewModelScope.launch(engineDispatcher) {
             val canReprint = prev.onlyPrintLayerChangedComparedTo(lastRenderedParams)
             renderFrameInternal(prev, preferReprint = canReprint)
@@ -463,6 +468,7 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
                 canRedo = redoStack.isNotEmpty()
             )
         }
+        if (_uiState.value.photoMetadata.filePath.isBlank()) return
         viewModelScope.launch(engineDispatcher) {
             val canReprint = next.onlyPrintLayerChangedComparedTo(lastRenderedParams)
             renderFrameInternal(next, preferReprint = canReprint)
@@ -489,6 +495,7 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun autoSolveNeutralPrint() {
+        if (_uiState.value.photoMetadata.filePath.isBlank()) return
         viewModelScope.launch(engineDispatcher) {
             _uiState.update { it.copy(isRenderingFrame = true) }
             try {

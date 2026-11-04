@@ -165,43 +165,21 @@ fun SpektraLabApp(viewModel: DarkroomViewModel) {
                         .fillMaxSize()
                         .padding(innerPadding)
                 ) {
-                    when (uiState.activeScreen) {
-                        ScreenRoute.LIBRARY -> {
-                            LibraryWorkbenchScreen(
-                                uiState = uiState,
-                                onImportClick = {
-                                    filePickerLauncher.launch(arrayOf("image/*", "application/octet-stream"))
-                                },
-                                onLoadSample = { idx -> viewModel.loadGoldenSample(idx) },
-                                onReopenSession = { item -> viewModel.reopenRecentSession(item) },
-                                onOpenParity = {
-                                    showParityDialog = true
-                                    if (uiState.parityReport == null && !uiState.isRunningParity) {
-                                        viewModel.runParitySelfTest()
-                                    }
-                                },
-                                onOpenSettings = { showSettingsDialog = true }
-                            )
-                        }
-                        ScreenRoute.EDITOR -> {
-                            BackHandler {
-                                viewModel.navigateToLibrary()
+                    DarkroomEditorScreen(
+                        uiState = uiState,
+                        viewModel = viewModel,
+                        onImportClick = {
+                            filePickerLauncher.launch(arrayOf("image/*", "application/octet-stream"))
+                        },
+                        onOpenExport = { showExportSheet = true },
+                        onOpenParity = {
+                            showParityDialog = true
+                            if (uiState.parityReport == null && !uiState.isRunningParity) {
+                                viewModel.runParitySelfTest()
                             }
-                            DarkroomEditorScreen(
-                                uiState = uiState,
-                                viewModel = viewModel,
-                                onBack = { viewModel.navigateToLibrary() },
-                                onOpenExport = { showExportSheet = true },
-                                onOpenParity = {
-                                    showParityDialog = true
-                                    if (uiState.parityReport == null && !uiState.isRunningParity) {
-                                        viewModel.runParitySelfTest()
-                                    }
-                                },
-                                onOpenSettings = { showSettingsDialog = true }
-                            )
-                        }
-                    }
+                        },
+                        onOpenSettings = { showSettingsDialog = true }
+                    )
 
                     if (showSettingsDialog) {
                         SettingsAndThemeDialog(
@@ -239,295 +217,17 @@ fun SpektraLabApp(viewModel: DarkroomViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LibraryWorkbenchScreen(
-    uiState: DarkroomUiState,
-    onImportClick: () -> Unit,
-    onLoadSample: (Int) -> Unit,
-    onReopenSession: (app.spektralab.android.viewmodel.RecentSessionItem) -> Unit,
-    onOpenParity: () -> Unit,
-    onOpenSettings: () -> Unit
-) {
-    val s = LocalAppStrings.current
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .verticalScroll(rememberScrollState())
-    ) {
-        TopAppBar(
-            title = {
-                Column {
-                    Text(
-                        text = s.appTitle,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = s.appSubtitle,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
-            actions = {
-                IconButton(onClick = onOpenParity) {
-                    Icon(Icons.Default.Science, contentDescription = s.parityCheckBtn)
-                }
-                IconButton(onClick = onOpenSettings) {
-                    Icon(Icons.Default.Palette, contentDescription = s.themeAndLangBtn)
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            )
-        )
-
-        if (uiState.isBusyLoadingPhoto) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Engine Status Banner
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (uiState.engineReady) Color(0xFF4CAF50)
-                                    else MaterialTheme.colorScheme.primary
-                                )
-                        )
-                        Column {
-                            Text(
-                                text = if (uiState.engineReady) s.engineReadyBadge else s.engineInitializing,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            if (uiState.gpuDeviceName.isNotBlank()) {
-                                Text(
-                                    text = "${uiState.gpuDeviceName} · 380–780nm (5nm) · LibRaw 0.22.2",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                    AssistChip(
-                        onClick = onOpenParity,
-                        label = { Text(s.parityCheckBtn) },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Science,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    )
-                }
-            }
-
-            // Primary Import Card
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.size(48.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.AddPhotoAlternate,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                        }
-                        Column {
-                            Text(
-                                text = s.importPhoto,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = s.importRawOrImageDesc,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    Button(
-                        onClick = onImportClick,
-                        enabled = uiState.engineReady && !uiState.isBusyLoadingPhoto,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(Icons.Default.AddPhotoAlternate, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(s.importPhoto, fontWeight = FontWeight.Bold)
-                    }
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                    // Built-in Spectral Reference Scenes
-                    FilledTonalButton(
-                        onClick = { onLoadSample(0) },
-                        enabled = uiState.engineReady && !uiState.isBusyLoadingPhoto,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(Icons.Default.CameraRoll, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(s.loadGoldenSampleSunset)
-                    }
-
-                    OutlinedButton(
-                        onClick = { onLoadSample(1) },
-                        enabled = uiState.engineReady && !uiState.isBusyLoadingPhoto,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(Icons.Default.Tune, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(s.loadGoldenSampleChart)
-                    }
-                }
-            }
-
-            // Recent Darkroom Filmstrip
-            Text(
-                text = s.recentDarkroomSessions,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            if (uiState.recentSessions.isEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = s.emptyLibraryTitle,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = s.emptyLibrarySubtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            } else {
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 8.dp)
-                ) {
-                    items(uiState.recentSessions) { session ->
-                        ElevatedCard(
-                            onClick = { onReopenSession(session) },
-                            modifier = Modifier.width(190.dp),
-                            shape = RoundedCornerShape(14.dp)
-                        ) {
-                            Column {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(115.dp)
-                                        .background(Color(0xFF0E0F12)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (session.thumbnail != null) {
-                                        Image(
-                                            bitmap = session.thumbnail.asImageBitmap(),
-                                            contentDescription = session.displayName,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                    }
-                                }
-                                Column(modifier = Modifier.padding(10.dp)) {
-                                    Text(
-                                        text = session.displayName,
-                                        style = MaterialTheme.typography.labelLarge,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        text = session.subtitle,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 private fun DarkroomEditorScreen(
     uiState: DarkroomUiState,
     viewModel: DarkroomViewModel,
-    onBack: () -> Unit,
+    onImportClick: () -> Unit,
     onOpenExport: () -> Unit,
     onOpenParity: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
     val s = LocalAppStrings.current
     var activeTab by remember { mutableIntStateOf(0) }
+    val hasPhoto = uiState.renderedBitmap != null
 
     Column(
         modifier = Modifier
@@ -544,11 +244,18 @@ private fun DarkroomEditorScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = s.backToLibrary)
+                    IconButton(
+                        onClick = onImportClick,
+                        enabled = uiState.engineReady && !uiState.isBusyLoadingPhoto
+                    ) {
+                        Icon(
+                            Icons.Default.AddPhotoAlternate,
+                            contentDescription = s.importPhoto,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                     Column(
                         modifier = Modifier
@@ -563,34 +270,34 @@ private fun DarkroomEditorScreen(
                             overflow = TextOverflow.Ellipsis
                         )
                         val exifLine = uiState.photoMetadata.formatExifSummary()
-                        if (exifLine.isNotBlank()) {
-                            Text(
-                                text = exifLine,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+                        Text(
+                            text = exifLine.ifBlank { s.appSubtitle },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
 
-                    IconButton(onClick = { viewModel.toggleHistogramOverlay() }) {
-                        Icon(
-                            Icons.Default.Equalizer,
-                            contentDescription = "Histogram",
-                            tint = if (uiState.showHistogramOverlay) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    IconButton(
-                        onClick = { viewModel.setComparingOriginal(!uiState.isComparingOriginal) }
-                    ) {
-                        Icon(
-                            Icons.Default.Compare,
-                            contentDescription = s.compareOriginal,
-                            tint = if (uiState.isComparingOriginal) MaterialTheme.colorScheme.tertiary
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    if (hasPhoto) {
+                        IconButton(onClick = { viewModel.toggleHistogramOverlay() }) {
+                            Icon(
+                                Icons.Default.Equalizer,
+                                contentDescription = "Histogram",
+                                tint = if (uiState.showHistogramOverlay) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        IconButton(
+                            onClick = { viewModel.setComparingOriginal(!uiState.isComparingOriginal) }
+                        ) {
+                            Icon(
+                                Icons.Default.Compare,
+                                contentDescription = s.compareOriginal,
+                                tint = if (uiState.isComparingOriginal) MaterialTheme.colorScheme.tertiary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                     IconButton(onClick = { viewModel.undo() }, enabled = uiState.canUndo) {
                         Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = s.undo)
@@ -603,9 +310,10 @@ private fun DarkroomEditorScreen(
                     }
                     Button(
                         onClick = onOpenExport,
+                        enabled = hasPhoto && !uiState.isBusyLoadingPhoto,
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                         shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.padding(end = 4.dp)
+                        modifier = Modifier.padding(end = 2.dp)
                     ) {
                         Icon(
                             Icons.Default.FileDownload,
@@ -626,16 +334,17 @@ private fun DarkroomEditorScreen(
             }
         }
 
-        // 2. Interactive Zoomable Darkroom Viewport (Upper 52%)
+        // 2. Interactive Zoomable Darkroom Viewport (Upper 50%)
         var zoomScale by remember { mutableFloatStateOf(1f) }
         var panOffset by remember { mutableStateOf(Offset.Zero) }
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(0.52f)
+                .weight(0.50f)
                 .background(Color(0xFF0B0C0E))
-                .pointerInput(Unit) {
+                .pointerInput(hasPhoto) {
+                    if (!hasPhoto) return@pointerInput
                     detectTransformGestures { _, pan, zoom, _ ->
                         val nextScale = (zoomScale * zoom).coerceIn(1f, 6f)
                         zoomScale = nextScale
@@ -646,15 +355,12 @@ private fun DarkroomEditorScreen(
                         }
                     }
                 }
-                .pointerInput(Unit) {
+                .pointerInput(hasPhoto) {
+                    if (!hasPhoto) return@pointerInput
                     detectTapGestures(
                         onDoubleTap = {
                             zoomScale = if (zoomScale > 1.2f) 1f else 2.5f
                             panOffset = Offset.Zero
-                        },
-                        onPress = {
-                            // Hold on canvas to preview original, release to return
-                            // Only trigger on long press via compare button or tap
                         }
                     )
                 },
@@ -681,8 +387,66 @@ private fun DarkroomEditorScreen(
                             translationY = panOffset.y
                         )
                 )
+            } else if (uiState.isBusyLoadingPhoto) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    CircularProgressIndicator()
+                    Text(
+                        text = if (s.isZh) "正在解码 RAW / 照片并构建 81 波长底片..." else "Decoding & building 81-wavelength negative...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFD0D0D5)
+                    )
+                }
             } else {
-                CircularProgressIndicator()
+                // Clean Empty Viewfinder Card with Direct Import Button
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = Color(0xFF17191E),
+                    modifier = Modifier
+                        .padding(horizontal = 24.dp)
+                        .fillMaxWidth()
+                        .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(18.dp))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(if (uiState.engineReady) Color(0xFF4CAF50) else Color(0xFFFFB74D))
+                            )
+                            Text(
+                                text = if (uiState.engineReady) s.engineReadyBadge else s.engineInitializing,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color(0xFFD5D5DC)
+                            )
+                        }
+                        Text(
+                            text = s.importRawOrImageDesc,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF9E9EA8)
+                        )
+                        Button(
+                            onClick = onImportClick,
+                            enabled = uiState.engineReady && !uiState.isBusyLoadingPhoto,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.AddPhotoAlternate, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(s.importPhoto, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             }
 
             // Top-Left Active Stock + Render Telemetry Badge
@@ -706,7 +470,7 @@ private fun DarkroomEditorScreen(
                         color = Color(0xFFFFCA7A),
                         fontWeight = FontWeight.SemiBold
                     )
-                    if (uiState.lastRenderElapsedMs > 0) {
+                    if (hasPhoto && uiState.lastRenderElapsedMs > 0) {
                         val modeLabel = if (uiState.lastRenderUsedReprint) "Reprint Cache" else "Full 81-WL"
                         Text(
                             text = String.format(Locale.US, "%.1f ms · %s", uiState.lastRenderElapsedMs, modeLabel),
@@ -720,7 +484,7 @@ private fun DarkroomEditorScreen(
             }
 
             // Top-Right Collapsible RGB + Luminance Histogram
-            if (uiState.showHistogramOverlay) {
+            if (hasPhoto && uiState.showHistogramOverlay) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -780,13 +544,13 @@ private fun DarkroomEditorScreen(
             }
         }
 
-        // 3. Lower Control Deck (48% height)
+        // 3. Lower Control Deck (50% height)
         Surface(
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 3.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(0.48f)
+                .weight(0.50f)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Box(

@@ -445,9 +445,10 @@ object SpektraCatalog {
     )
 
     val cameraFilters: List<CameraFilterSpec> = listOf(
-        CameraFilterSpec("none", "None (Clear)", "无滤镜", 0xFF9E9E9E),
+        CameraFilterSpec("", "None (Clear)", "无滤镜", 0xFF9E9E9E),
         CameraFilterSpec("w8", "Wratten #8 Yellow", "#8 黄镜 (压暗蓝天)", 0xFFF2C94C),
         CameraFilterSpec("w11", "Wratten #11 Yellow-Green", "#11 黄绿 (人像肤色)", 0xFF8CD754),
+        CameraFilterSpec("w12", "Wratten #12 Minus-Blue", "#12 减蓝黄镜", 0xFFE6B800),
         CameraFilterSpec("w15", "Wratten #15 Deep Yellow", "#15 深黄 (高反差云层)", 0xFFF2994A),
         CameraFilterSpec("w21", "Wratten #21 Orange", "#21 橙镜 (建筑/风光)", 0xFFEB7A34),
         CameraFilterSpec("w25", "Wratten #25 Red", "#25 红镜 (戏剧性黑天)", 0xFFEB5757),
@@ -473,7 +474,7 @@ data class DarkroomParams(
     val autoExposureMethod: String = "center_weighted",
     val exposureCompensationEv: Double = 0.0,
     val densityCurveGamma: Double = 1.0,
-    val cameraFilter: String = "none",
+    val cameraFilter: String = "",
     val lensBlurUm: Double = 0.0,
 
     // Optics, Halation, DIR & Grain
