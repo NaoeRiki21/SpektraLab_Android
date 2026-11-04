@@ -292,13 +292,18 @@ public:
             detail = "Vulkan probe passed (precise product + fused fma; full shader parity pending)";
             return true;
         }
-        if (zero && !exact && properties_.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU) {
+#ifdef __ANDROID__
+        const bool allow_unfused_dekker = true;
+#else
+        const bool allow_unfused_dekker = (properties_.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU);
+#endif
+        if (zero && !exact && allow_unfused_dekker) {
             // The double-float kernels then take an exact Dekker product
             // instead of fma (specialization constant 0; see two_prod in
             // spk_iir_df_acc.comp): without it the IIR blur's low word is lost
             // and the recursion amplifies it -- 0.4 % on a 257-px constant row.
             fused_fma_ = 0;
-            detail = "Vulkan probe passed on a CPU device with unfused fma (double-float kernels use an "
+            detail = "Vulkan probe passed on a CPU/mobile device with unfused fma (double-float kernels use an "
                      "exact Dekker product; full shader parity pending)";
             probe_cpu_storage_range(detail);
             return true;

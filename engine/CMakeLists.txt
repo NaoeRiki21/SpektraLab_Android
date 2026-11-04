@@ -89,7 +89,8 @@ if(NOT APPLE)
               "$ENV{VULKAN_SDK}/include"
         NO_CMAKE_FIND_ROOT_PATH)
     find_program(SPEKTRALAB_GLSLANG NAMES glslangValidator glslang
-        HINTS "$ENV{VULKAN_SDK}/Bin" "$ENV{VULKAN_SDK}/bin")
+        HINTS "$ENV{VULKAN_SDK}/Bin" "$ENV{VULKAN_SDK}/bin"
+        NO_CMAKE_FIND_ROOT_PATH)
 
     if(SPEKTRALAB_VULKAN_HEADERS AND SPEKTRALAB_GLSLANG)
         # volk, compiled once as C, with the platform's loader name built in.
@@ -140,8 +141,9 @@ if(NOT APPLE)
         add_library(spektralab_engine STATIC
             $<TARGET_OBJECTS:spektralab_pipeline>
             src/gpu/vulkan_gpu.cpp)
+        set_target_properties(spektralab_engine PROPERTIES POSITION_INDEPENDENT_CODE ON)
         target_compile_features(spektralab_engine PUBLIC cxx_std_20)
-        target_include_directories(spektralab_engine PRIVATE
+        target_include_directories(spektralab_engine PUBLIC
             "${CMAKE_CURRENT_SOURCE_DIR}/include"
             "${CMAKE_CURRENT_SOURCE_DIR}/src")
         target_link_libraries(spektralab_engine PUBLIC spektralab_core spk_volk)
@@ -154,9 +156,10 @@ if(NOT APPLE)
         if(SPEKTRALAB_BUILD_NATIVE_RAW)
             include(cmake/LibRaw.cmake)
             add_library(spk_image_io STATIC src/io/raw_decoder.cpp src/io/raw_headroom.cpp src/io/image_writer.cpp)
+            set_target_properties(spk_image_io PROPERTIES POSITION_INDEPENDENT_CODE ON)
             target_compile_features(spk_image_io PUBLIC cxx_std_20)
             target_include_directories(spk_image_io PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
-            target_link_libraries(spk_image_io PRIVATE spk_libraw)
+            target_link_libraries(spk_image_io PUBLIC spk_libraw)
             if(WIN32)
                 # Win32-only RAW-to-TIFF tool; engine/host is the portable host.
                 add_executable(spk_raw_render tools/raw_render.cpp)
